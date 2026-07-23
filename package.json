@@ -1,0 +1,14 @@
+{
+  "name": "ctc-scheduler",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Count The Cost — self-hosted, hands-off social scheduler (Instagram + Facebook via the Meta Graph API).",
+  "type": "commonjs",
+  "scripts": {
+    "publish": "node publish.js",
+    "dry-run": "DRY_RUN=1 node publish.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
