@@ -1,0 +1,54 @@
+name: CTC Scheduler
+
+# The "clock". Wakes up on a schedule, publishes anything due,
+# and commits the updated queue back to the repo.
+
+on:
+  schedule:
+    # Every 15 minutes (UTC). GitHub may delay scheduled runs under load,
+    # so posts fire at the first check AFTER their publish_at time.
+    - cron: "*/15 * * * *"
+  workflow_dispatch:      # lets you run it manually from the Actions tab
+    inputs:
+      dry_run:
+        description: "Dry run (log what would post, publish nothing)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write        # needed to commit queue.json status updates
+
+concurrency:
+  group: ctc-scheduler    # never run two publishers at once
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Publish due posts
+        env:
+          META_PAGE_TOKEN: ${{ secrets.META_PAGE_TOKEN }}
+          FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
+          IG_BUSINESS_ID: ${{ secrets.IG_BUSINESS_ID }}
+          IMAGE_BASE_URL: ${{ secrets.IMAGE_BASE_URL }}
+          DRY_RUN: ${{ (github.event_name == 'workflow_dispatch' && inputs.dry_run) && '1' || '0' }}
+        run: node publish.js
+
+      - name: Commit queue updates
+        run: |
+          if [[ -n "$(git status --porcelain queue.json)" ]]; then
+            git config user.name "ctc-scheduler-bot"
+            git config user.email "actions@github.com"
+            git add queue.json
+            git commit -m "chore: update queue status [skip ci]"
+            git push
+          else
+            echo "No queue changes to commit."
+          fi
