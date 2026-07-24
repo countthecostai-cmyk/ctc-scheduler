@@ -16,7 +16,7 @@ on:
         default: false
 
 permissions:
-  contents: write        # needed to commit queue.json status updates
+  contents: write         # needed to commit queue.json status updates
 
 concurrency:
   group: ctc-scheduler    # never run two publishers at once
@@ -38,6 +38,10 @@ jobs:
           FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
           IG_BUSINESS_ID: ${{ secrets.IG_BUSINESS_ID }}
           IMAGE_BASE_URL: ${{ secrets.IMAGE_BASE_URL }}
+          YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
+          YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+          YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
+          VIDEO_BASE_URL: ${{ secrets.VIDEO_BASE_URL }}
           DRY_RUN: ${{ (github.event_name == 'workflow_dispatch' && inputs.dry_run) && '1' || '0' }}
         run: node publish.js
 
