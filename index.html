@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Count The Cost Scheduler</title>
+<style>
+  :root { --navy:#12253b; --navy2:#1c3350; --gold:#b8862b; --cream:#f5ecd7; --ok:#1f9d55; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:Georgia,'Times New Roman',serif; color:var(--navy);
+         background:var(--cream); line-height:1.6; }
+  header { background:var(--navy); color:var(--cream); padding:40px 24px 34px; text-align:center; }
+  .badge { width:74px; height:74px; margin:0 auto 14px; border-radius:18px;
+           background:radial-gradient(circle at 50% 38%, #24405f 0%, var(--navy) 72%);
+           border:2px solid var(--gold); display:flex; flex-direction:column; align-items:center;
+           justify-content:center; }
+  .badge .ct { color:var(--cream); font-size:1.5rem; letter-spacing:2px; font-weight:bold; line-height:1; }
+  .badge .bar { width:34px; height:2px; background:var(--gold); margin:4px 0 3px; }
+  .badge .sub { color:var(--gold); font-size:0.42rem; letter-spacing:1.5px; }
+  header h1 { margin:0 0 6px; font-size:1.9rem; }
+  header p { margin:0; color:var(--gold); font-size:1.02rem; }
+  main { max-width:640px; margin:0 auto; padding:34px 22px 70px; }
+  .lead { font-size:1.05rem; }
+  .card { background:#fff; border:1px solid #e4d9bf; border-radius:12px; padding:22px 24px; margin:22px 0;
+          box-shadow:0 2px 10px rgba(18,37,59,0.06); }
+  .step { display:flex; align-items:center; gap:10px; margin:0 0 10px; }
+  .num { width:26px; height:26px; border-radius:50%; background:var(--navy); color:var(--cream);
+         display:flex; align-items:center; justify-content:center; font-size:0.9rem; flex:0 0 auto; }
+  .step h2 { font-size:1.12rem; margin:0; }
+  .muted { color:#5a6b7d; font-size:0.96rem; margin:2px 0 14px; }
+  button { font-family:inherit; font-size:1rem; border:none; border-radius:8px; padding:12px 20px;
+           cursor:pointer; font-weight:bold; }
+  .btn-tt { background:#000; color:#fff; display:inline-flex; align-items:center; gap:9px; }
+  .btn-tt .tt { color:#fff; font-weight:bold; }
+  .btn-post { background:var(--gold); color:#fff; }
+  .btn-post:disabled { background:#cdbf9e; cursor:not-allowed; }
+  .pill { display:inline-flex; align-items:center; gap:8px; background:#e9f6ee; color:var(--ok);
+          border:1px solid #bfe6cd; border-radius:20px; padding:7px 14px; font-size:0.95rem;
+          font-weight:bold; }
+  .scopes { list-style:none; padding:0; margin:12px 0 0; font-size:0.92rem; color:#3a4a5c; }
+  .scopes li { padding:3px 0; }
+  .scopes code { background:#f0ead6; border-radius:4px; padding:1px 6px; color:var(--navy); }
+  .status { margin-top:14px; font-size:0.98rem; }
+  .hide { display:none; }
+  footer { text-align:center; padding:22px; color:#5a6b7d; font-size:0.88rem; }
+  a { color:var(--gold); }
+</style>
+</head>
+<body>
+<header>
+  <div class="badge"><span class="ct">CTC</span><span class="bar"></span><span class="sub">COUNT THE COST</span></div>
+  <h1>Count The Cost Scheduler</h1>
+  <p>Publishing our own content, on schedule</p>
+</header>
+<main>
+  <p class="lead">Count The Cost Scheduler is our private, self-hosted tool for publishing
+  <strong>our own</strong> educational videos to <strong>our own</strong> connected social accounts,
+  including our TikTok account, using each platform's official API.</p>
+
+  <div class="card">
+    <div class="step"><span class="num">1</span><h2>Connect our TikTok account</h2></div>
+    <p class="muted">Authorize the scheduler once with Login Kit so it can publish to our profile.</p>
+    <div id="connectRow">
+      <button class="btn-tt" id="loginBtn"><span class="tt">TikTok</span> Log in with TikTok</button>
+    </div>
+    <div id="connectedRow" class="hide">
+      <span class="pill">&check;&nbsp; Connected to TikTok</span>
+      <div class="status" id="acctLine"></div>
+      <ul class="scopes">
+        <li>&check; <code>user.info.basic</code> &mdash; confirm the connected account</li>
+        <li>&check; <code>video.publish</code> &mdash; direct-post our videos</li>
+        <li>&check; <code>video.upload</code> &mdash; upload our videos as drafts</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="step"><span class="num">2</span><h2>Publish a scheduled video</h2></div>
+    <p class="muted">Send the next due video from our queue to TikTok via the Content Posting API.</p>
+    <button class="btn-post" id="postBtn" disabled>Publish scheduled video to TikTok</button>
+    <div class="status" id="postStatus"></div>
+  </div>
+
+  <p class="muted" style="text-align:center">
+    <a href="privacy-policy.html">Privacy Policy</a> &nbsp;&middot;&nbsp;
+    <a href="terms.html">Terms of Service</a>
+  </p>
+</main>
+<footer>&copy; 2026 Count The Cost Bookkeeping &mdash; internal scheduling tool</footer>
+
+<script>
+  var CLIENT_KEY = "sbawmsr2jw2li02qrj";
+  var REDIRECT_URI = "https://countthecostai-cmyk.github.io/ctc-scheduler/";
+  var SCOPES = "user.info.basic,video.publish,video.upload";
+
+  function startLogin() {
+    var state = "ctc" + String(Date.now());
+    var url = "https://www.tiktok.com/v2/auth/authorize/"
+      + "?client_key=" + encodeURIComponent(CLIENT_KEY)
+      + "&scope=" + encodeURIComponent(SCOPES)
+      + "&response_type=code"
+      + "&redirect_uri=" + encodeURIComponent(REDIRECT_URI)
+      + "&state=" + encodeURIComponent(state);
+    window.location.href = url;
+  }
+
+  function getParam(name) {
+    var m = new RegExp("[?&]" + name + "=([^&]+)").exec(window.location.search);
+    return m ? decodeURIComponent(m[1]) : null;
+  }
+
+  function showConnected(handle) {
+    document.getElementById("connectRow").classList.add("hide");
+    document.getElementById("connectedRow").classList.remove("hide");
+    document.getElementById("postBtn").disabled = false;
+    if (handle) {
+      document.getElementById("acctLine").textContent = "Signed in as " + handle;
+    }
+  }
+
+  document.getElementById("loginBtn").addEventListener("click", startLogin);
+  document.getElementById("postBtn").addEventListener("click", function () {
+    var s = document.getElementById("postStatus");
+    this.disabled = true;
+    s.textContent = "Uploading video to TikTok...";
+    s.style.color = "#5a6b7d";
+  });
+
+  // If TikTok redirected back with an authorization code, show the connected state.
+  if (getParam("code")) {
+    showConnected(null);
+  }
+</script>
+</body>
+</html>
